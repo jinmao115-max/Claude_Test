@@ -5,7 +5,6 @@ from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
-# 日本語版・JPY固定
 BASE_URL = "https://www.agoda.com/ja-jp/search"
 
 
@@ -13,11 +12,15 @@ def scrape_agoda(condition: dict) -> list:
     """
     Agoda（日本語版・JPY）から指定ホテル/地域の価格を取得する。
     """
-    query    = condition.get("hotel_name") or condition.get("location", "東京")
-    checkin  = condition.get("checkin", "")
-    checkout = condition.get("checkout", "")
-    guests   = int(condition.get("guests", 2))
-    rooms    = int(condition.get("rooms", 1))
+    hotel_name  = condition.get("hotel_name", "").strip()
+    location    = condition.get("location", "").strip()
+    query       = hotel_name or location or "東京"
+    is_hotel    = bool(hotel_name)
+
+    checkin     = condition.get("checkin", "")
+    checkout    = condition.get("checkout", "")
+    guests      = int(condition.get("guests", 2))
+    rooms       = int(condition.get("rooms", 1))
     free_cancel = condition.get("free_cancellation", False)
     breakfast   = condition.get("breakfast", "any")
 
@@ -33,7 +36,7 @@ def scrape_agoda(condition: dict) -> list:
         url += "&filterByBreakfastIncluded=true"
 
     results = []
-    logger.info("Agoda 検索: %s", query)
+    logger.info("Agoda 検索: %s (モード: %s)", query, "ホテル名" if is_hotel else "地域")
 
     try:
         with sync_playwright() as p:
@@ -48,10 +51,8 @@ def scrape_agoda(condition: dict) -> list:
             )
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-            # Agoda は JS レンダリングが遅いため長めに待機
             page.wait_for_timeout(6000)
 
-            # ── セレクタ候補を複数試す ──────────────────────────
             cards = (
                 page.query_selector_all('[data-element-name="property-card"]')
                 or page.query_selector_all('[class*="PropertyCard"]')
@@ -59,19 +60,17 @@ def scrape_agoda(condition: dict) -> list:
             )
             logger.info("Agoda: %d 件のカードを検出", len(cards))
 
-            for card in cards[:20]:
+            for card in cards[:30]:
                 try:
-                    # ホテル名
                     name_el = (
                         card.query_selector('[data-element-name="property-card-name"]')
                         or card.query_selector('h3')
                         or card.query_selector('[class*="PropertyName"]')
                     )
-                    # 価格
                     price_el = (
                         card.query_selector('[data-element-name="final-price"]')
-                        or card.query_selector('[class*="Price"][class*="final"]')
                         or card.query_selector('[data-selenium="display-price"]')
+                        or card.query_selector('[class*="Price"][class*="final"]')
                         or card.query_selector('[class*="price"]')
                     )
                     url_el = card.query_selector("a")
@@ -79,7 +78,7 @@ def scrape_agoda(condition: dict) -> list:
                     if not (name_el and price_el):
                         continue
 
-                    hotel_name = name_el.inner_text().strip()
+                    h_name     = name_el.inner_text().strip()
                     price_text = price_el.inner_text().strip()
                     href       = url_el.get_attribute("href") if url_el else ""
                     full_url   = href if href.startswith("http") else f"https://www.agoda.com{href}"
@@ -90,7 +89,7 @@ def scrape_agoda(condition: dict) -> list:
 
                     results.append({
                         "site":       "Agoda",
-                        "hotel_name": hotel_name,
+                        "hotel_name": h_name,
                         "price":      price,
                         "currency":   "JPY",
                         "url":        full_url,
@@ -98,7 +97,6 @@ def scrape_agoda(condition: dict) -> list:
                 except Exception as e:
                     logger.debug("card parse error: %s", e)
 
-            # カードが取れなかった場合のデバッグ用スクリーンショット
             if not results:
                 try:
                     page.screenshot(path="agoda_debug.png")
@@ -110,16 +108,12 @@ def scrape_agoda(condition: dict) -> list:
     except Exception as e:
         logger.error("Agoda scrape failed: %s", e)
 
-    # ホテル名指定がある場合は名前で絞り込み
-    results = _filter_by_name(results, query)
+    results = _filter_results(results, query, is_hotel)
     logger.info("Agoda: %d 件取得", len(results))
     return results
 
 
 def _parse_jpy(text: str):
-    """
-    "¥12,345" や "12,345円" などから整数を取り出す。
-    """
     nums = re.findall(r"[\d,]+", text)
     for n in nums:
         val = int(n.replace(",", ""))
@@ -128,17 +122,35 @@ def _parse_jpy(text: str):
     return None
 
 
-def _filter_by_name(results: list, query: str) -> list:
+def _filter_results(results: list, query: str, is_hotel: bool) -> list:
     """
-    query のキーワードを少なくとも1つ含むホテルに絞り込む。
-    一致ゼロの場合は全件返す。
+    is_hotel=True  → 全キーワード一致（完全一致寄り）
+    is_hotel=False → 地域キーワードを含むものに絞る
     """
     if not query:
         return results
+
     keywords = re.split(r"[\s　]+", query.strip())
     keywords = [k.lower() for k in keywords if k]
-    filtered = [
-        r for r in results
-        if any(k in r["hotel_name"].lower() for k in keywords)
-    ]
-    return filtered if filtered else results
+
+    if is_hotel:
+        # 全キーワードが hotel_name に含まれるもの
+        filtered = [
+            r for r in results
+            if all(k in r["hotel_name"].lower() for k in keywords)
+        ]
+        # ゼロなら部分一致にフォールバック
+        if not filtered:
+            filtered = [
+                r for r in results
+                if any(k in r["hotel_name"].lower() for k in keywords)
+            ]
+    else:
+        filtered = [
+            r for r in results
+            if any(k in r["hotel_name"].lower() for k in keywords)
+        ]
+        if not filtered:
+            filtered = results
+
+    return filtered

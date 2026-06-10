@@ -5,7 +5,6 @@ from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
-# 日本語版・JPY固定
 BASE_URL = "https://www.booking.com/searchresults.ja.html"
 
 
@@ -13,11 +12,16 @@ def scrape_booking(condition: dict) -> list:
     """
     Booking.com（日本語版・JPY）から指定ホテル/地域の価格を取得する。
     """
-    query    = condition.get("hotel_name") or condition.get("location", "東京")
-    checkin  = condition.get("checkin", "")
-    checkout = condition.get("checkout", "")
-    guests   = int(condition.get("guests", 2))
-    rooms    = int(condition.get("rooms", 1))
+    hotel_name  = condition.get("hotel_name", "").strip()
+    location    = condition.get("location", "").strip()
+    # ホテル名指定が優先、なければ地域名で検索
+    query       = hotel_name or location or "東京"
+    is_hotel    = bool(hotel_name)   # True=ホテル名指定, False=地域検索
+
+    checkin     = condition.get("checkin", "")
+    checkout    = condition.get("checkout", "")
+    guests      = int(condition.get("guests", 2))
+    rooms       = int(condition.get("rooms", 1))
     free_cancel = condition.get("free_cancellation", False)
     breakfast   = condition.get("breakfast", "any")
 
@@ -33,7 +37,7 @@ def scrape_booking(condition: dict) -> list:
         url += "%3Bmealplan%3D1"
 
     results = []
-    logger.info("Booking.com 検索: %s", query)
+    logger.info("Booking.com 検索: %s (モード: %s)", query, "ホテル名" if is_hotel else "地域")
 
     try:
         with sync_playwright() as p:
@@ -46,11 +50,9 @@ def scrape_booking(condition: dict) -> list:
                     "Chrome/124.0.0.0 Safari/537.36"
                 ),
             )
-            # クッキー同意ポップアップ対策
             page.goto(url, wait_until="domcontentloaded", timeout=60_000)
             page.wait_for_timeout(4000)
 
-            # クッキー同意ボタンがあれば閉じる
             try:
                 page.click('[id="onetrust-accept-btn-handler"]', timeout=3000)
                 page.wait_for_timeout(1000)
@@ -58,22 +60,22 @@ def scrape_booking(condition: dict) -> list:
                 pass
 
             cards = page.query_selector_all('[data-testid="property-card"]')
-            for card in cards[:20]:
+            for card in cards[:30]:
                 try:
                     name_el  = card.query_selector('[data-testid="title"]')
                     price_el = card.query_selector('[data-testid="price-and-discounted-price"]')
                     url_el   = card.query_selector('a[data-testid="title-link"]')
                     if not (name_el and price_el):
                         continue
-                    hotel_name = name_el.inner_text().strip()
+                    h_name     = name_el.inner_text().strip()
                     price_text = price_el.inner_text().strip()
                     href       = url_el.get_attribute("href") if url_el else ""
                     price      = _parse_jpy(price_text)
-                    if price is None or price < 1000:  # 1000円未満は誤パース
+                    if price is None or price < 1000:
                         continue
                     results.append({
                         "site":       "Booking.com",
-                        "hotel_name": hotel_name,
+                        "hotel_name": h_name,
                         "price":      price,
                         "currency":   "JPY",
                         "url":        href,
@@ -85,38 +87,50 @@ def scrape_booking(condition: dict) -> list:
     except Exception as e:
         logger.error("Booking.com scrape failed: %s", e)
 
-    # ホテル名指定がある場合は名前で絞り込み
-    results = _filter_by_name(results, query)
+    results = _filter_results(results, query, is_hotel)
     logger.info("Booking.com: %d 件取得", len(results))
     return results
 
 
 def _parse_jpy(text: str):
-    """
-    "¥12,345" や "12,345円" などから整数を取り出す。
-    カンマ区切り対応。
-    """
-    # カンマを除いた連続する数字ブロックを全て抽出
     nums = re.findall(r"[\d,]+", text)
     for n in nums:
         val = int(n.replace(",", ""))
-        if val >= 1000:   # 宿泊料金として妥当な下限
+        if val >= 1000:
             return val
     return None
 
 
-def _filter_by_name(results: list, query: str) -> list:
+def _filter_results(results: list, query: str, is_hotel: bool) -> list:
     """
-    query のキーワードを少なくとも1つ含むホテルに絞り込む。
-    一致ゼロの場合は全件返す（地域検索のフォールバック）。
+    is_hotel=True  → ホテル名の全キーワードが一致するものだけ返す（完全一致寄り）
+    is_hotel=False → 地域名キーワードを含むものに絞る（0件なら全件返す）
     """
     if not query:
         return results
-    # スペース・全角スペースで分割してキーワードリスト化
+
     keywords = re.split(r"[\s　]+", query.strip())
     keywords = [k.lower() for k in keywords if k]
-    filtered = [
-        r for r in results
-        if any(k in r["hotel_name"].lower() for k in keywords)
-    ]
-    return filtered if filtered else results
+
+    if is_hotel:
+        # 全キーワードが hotel_name に含まれるもののみ
+        filtered = [
+            r for r in results
+            if all(k in r["hotel_name"].lower() for k in keywords)
+        ]
+        # 完全一致ゼロなら部分一致（少なくとも1キーワード）にフォールバック
+        if not filtered:
+            filtered = [
+                r for r in results
+                if any(k in r["hotel_name"].lower() for k in keywords)
+            ]
+    else:
+        # 地域検索：地域キーワードを含むものに絞る
+        filtered = [
+            r for r in results
+            if any(k in r["hotel_name"].lower() for k in keywords)
+        ]
+        if not filtered:
+            filtered = results  # フォールバック
+
+    return filtered
