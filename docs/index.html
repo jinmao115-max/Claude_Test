@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Price Checker — 管理画面</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --green: #16a34a;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem 1rem;
+    }
+    header {
+      max-width: 900px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header span { font-size: 0.85rem; color: var(--muted); }
+    .grid {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      gap: 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--primary); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: var(--bg); font-weight: 600; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-booking { background: #dbeafe; color: #1d4ed8; }
+    .badge-agoda   { background: #fef3c7; color: #b45309; }
+    .cheapest-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1rem;
+    }
+    .cheapest-banner .icon { font-size: 1.5rem; }
+    .run-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .run-btn:hover { background: var(--primary-hover); }
+    #status { margin-top: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+    .last-updated { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🏨 Hotel Price Checker</h1>
+      <span>毎朝7時に自動実行 — Booking.com & Agoda 最安値比較</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- 最安値バナー -->
+    <div class="cheapest-banner">
+      <span class="icon">🏆</span>
+      <div>
+        <strong>本日の最安値</strong>: データを取得するには下のボタンを押してください。
+      </div>
+    </div>
+
+    <!-- 手動実行 -->
+    <div class="card">
+      <h2>手動実行 / GitHub Actions</h2>
+      <p style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem;">
+        GitHub Actions の workflow_dispatch を使って手動でスクレイピングを実行できます。
+      </p>
+      <a
+        class="run-btn"
+        href="https://github.com/jinmao115-max/Claude_Test/actions/workflows/hotel_checker.yml"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ▶ GitHub Actions を開く
+      </a>
+      <div id="status"></div>
+    </div>
+
+    <!-- Booking.com TOP 5 -->
+    <div class="card">
+      <h2>Booking.com <span class="badge badge-booking">TOP 5</span></h2>
+      <p class="last-updated">最終更新: — (GitHub Actions ログを参照)</p>
+      <table>
+        <thead><tr><th>ホテル名</th><th>価格</th></tr></thead>
+        <tbody id="booking-tbody">
+          <tr><td colspan="2" style="color:var(--muted);">GitHub Actions 実行後にデータが更新されます。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Agoda TOP 5 -->
+    <div class="card">
+      <h2>Agoda <span class="badge badge-agoda">TOP 5</span></h2>
+      <p class="last-updated">最終更新: — (GitHub Actions ログを参照)</p>
+      <table>
+        <thead><tr><th>ホテル名</th><th>価格</th></tr></thead>
+        <tbody id="agoda-tbody">
+          <tr><td colspan="2" style="color:var(--muted);">GitHub Actions 実行後にデータが更新されます。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 設定情報 -->
+    <div class="card">
+      <h2>設定情報</h2>
+      <table>
+        <tr><th>通知メール</th><td>jinmao115@gmail.com</td></tr>
+        <tr><th>実行スケジュール</th><td>毎朝 7:00 (JST)</td></tr>
+        <tr><th>スクレイピングエンジン</th><td>Playwright (Chromium)</td></tr>
+        <tr><th>対象サイト</th><td>Booking.com, Agoda</td></tr>
+        <tr><th>リポジトリ</th><td>
+          <a href="https://github.com/jinmao115-max/Claude_Test" target="_blank" rel="noopener noreferrer">
+            jinmao115-max/Claude_Test
+          </a>
+        </td></tr>
+      </table>
+    </div>
+
+  </div>
+</body>
+</html>
