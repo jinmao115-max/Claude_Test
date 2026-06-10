@@ -1,16 +1,8 @@
-"""
-Hotel Price Checker - Main Entry Point
-Scrapes hotel prices from Booking.com and Agoda, compares them, and sends a Gmail notification.
-"""
-
-import asyncio
+import json
+import sys
 import logging
-from datetime import datetime
-
-from src.scraper_booking import scrape_booking
-from src.scraper_agoda import scrape_agoda
 from src.compare_prices import compare_prices
-from src.send_gmail import send_gmail
+from src.send_gmail import send_email
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,18 +10,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def main():
+    # 検索条件を読み込み
+    try:
+        with open("config/search_conditions.json", "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception as e:
+        logger.error("設定ファイルの読み込みに失敗: %s", e)
+        sys.exit(1)
 
-async def main():
-    logger.info("Hotel price check started at %s", datetime.now().strftime("%Y-%m-%d %H:%M"))
+    searches = config.get("searches", [])
+    notify_email = config.get("settings", {}).get("notify_email", "jinmao115@gmail.com")
 
-    booking_prices = await scrape_booking()
-    agoda_prices = await scrape_agoda()
+    if not searches:
+        logger.warning("検索条件が設定されていません")
+        sys.exit(0)
 
-    report = compare_prices(booking_prices, agoda_prices)
+    logger.info("%d 件の検索条件を処理します", len(searches))
 
-    send_gmail(report)
-    logger.info("Done.")
+    all_results = []
+    for i, condition in enumerate(searches, 1):
+        name = condition.get("hotel_name", condition.get("location", "不明"))
+        logger.info("[%d/%d] %s を検索中...", i, len(searches), name)
+        result = compare_prices(condition)
+        all_results.append(result)
+        if result["cheapest"]:
+            cheapest = result["cheapest"]
+            logger.info("  最安値: %s ¥%s", cheapest["site"], f"{cheapest['price']:,}")
+        else:
+            logger.info("  結果なし")
 
+    logger.info("%s にメールを送信中...", notify_email)
+    send_email(notify_email, all_results)
+    logger.info("完了！")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
