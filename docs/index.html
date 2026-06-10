@@ -1,168 +1,793 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hotel Price Checker — 管理画面</title>
-  <style>
-    :root {
-      --bg: #f5f7fa;
-      --card: #ffffff;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --border: #e2e8f0;
-      --text: #1e293b;
-      --muted: #64748b;
-      --green: #16a34a;
-      --red: #dc2626;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 2rem 1rem;
-    }
-    header {
-      max-width: 900px;
-      margin: 0 auto 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    header h1 { font-size: 1.5rem; font-weight: 700; }
-    header span { font-size: 0.85rem; color: var(--muted); }
-    .grid {
-      max-width: 900px;
-      margin: 0 auto;
-      display: grid;
-      gap: 1.5rem;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-    .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--primary); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    th, td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); text-align: left; }
-    th { background: var(--bg); font-weight: 600; }
-    a { color: var(--primary); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .badge {
-      display: inline-block;
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .badge-booking { background: #dbeafe; color: #1d4ed8; }
-    .badge-agoda   { background: #fef3c7; color: #b45309; }
-    .cheapest-banner {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 10px;
-      padding: 1rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-size: 1rem;
-    }
-    .cheapest-banner .icon { font-size: 1.5rem; }
-    .run-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1.2rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .run-btn:hover { background: var(--primary-hover); }
-    #status { margin-top: 0.75rem; font-size: 0.85rem; color: var(--muted); }
-    .last-updated { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hotel Price Checker — 管理画面</title>
+<style>
+  /* ── Reset & Variables ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #21262d;
+    --surface3:  #30363d;
+    --border:    #30363d;
+    --border2:   #484f58;
+    --primary:   #58a6ff;
+    --primary-d: #1f6feb;
+    --success:   #3fb950;
+    --danger:    #f85149;
+    --warning:   #d29922;
+    --text:      #e6edf3;
+    --text2:     #8b949e;
+    --text3:     #6e7681;
+    --purple:    #bc8cff;
+    --orange:    #ffa657;
+    --radius:    8px;
+    --radius-lg: 12px;
+    --shadow:    0 8px 24px rgba(0,0,0,.4);
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .logo { display: flex; align-items: center; gap: .6rem; font-weight: 700; font-size: 1.05rem; }
+  .logo-icon { font-size: 1.4rem; }
+  .header-actions { display: flex; align-items: center; gap: .75rem; }
+  .badge-status {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .75rem; color: var(--text2);
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: .25rem .65rem; border-radius: 999px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+         box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Main ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; width: 100%; }
+
+  /* ── Section titles ── */
+  .section-title {
+    font-size: .7rem; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text3);
+    margin-bottom: .75rem;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .card-title {
+    font-size: .95rem; font-weight: 600;
+    display: flex; align-items: center; gap: .5rem;
+  }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: .25rem; margin-bottom: 1.75rem; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: .55rem 1.1rem; font-size: .875rem; font-weight: 500;
+    color: var(--text2); cursor: pointer; border: none; background: none;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── Grid helpers ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
+  @media(max-width:700px) {
+    .grid-2,.grid-3,.grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Form elements ── */
+  label { display: block; font-size: .78rem; color: var(--text2); margin-bottom: .35rem; }
+  input, select, textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: var(--radius); padding: .5rem .75rem;
+    font-size: .875rem; outline: none; transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(88,166,255,.15);
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(.6); cursor: pointer; }
+  select option { background: var(--surface2); }
+  .form-row { margin-bottom: .85rem; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem 1rem; border-radius: var(--radius); font-size: .85rem;
+    font-weight: 500; cursor: pointer; border: 1px solid transparent;
+    transition: opacity .15s, box-shadow .15s, transform .1s; white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--primary-d); border-color: var(--primary); color: #fff; }
+  .btn-primary:hover { opacity: .85; box-shadow: 0 0 10px rgba(88,166,255,.3); }
+  .btn-success { background: #196c2e; border-color: var(--success); color: var(--success); }
+  .btn-success:hover { opacity: .85; }
+  .btn-danger  { background: #490202; border-color: var(--danger); color: var(--danger); }
+  .btn-danger:hover  { opacity: .85; }
+  .btn-ghost   { background: transparent; border-color: var(--border2); color: var(--text2); }
+  .btn-ghost:hover   { border-color: var(--text2); color: var(--text); }
+  .btn-sm { padding: .3rem .7rem; font-size: .78rem; }
+  .btn-lg { padding: .65rem 1.5rem; font-size: .95rem; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
+
+  /* ── Condition List ── */
+  #condition-list { display: flex; flex-direction: column; gap: .75rem; }
+  .condition-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.25rem;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; transition: border-color .15s;
+  }
+  .condition-item:hover { border-color: var(--border2); }
+  .condition-item.editing { border-color: var(--primary); }
+  .condition-meta { flex: 1; min-width: 0; }
+  .condition-name {
+    font-weight: 600; font-size: .9rem; margin-bottom: .3rem;
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  }
+  .condition-details { font-size: .78rem; color: var(--text2); display: flex; flex-wrap: wrap; gap: .5rem .75rem; }
+  .condition-details span::before { content: '•'; margin-right: .3rem; color: var(--text3); }
+  .condition-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+  .tag {
+    font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: 999px;
+    background: var(--surface3); color: var(--text2); border: 1px solid var(--border2);
+  }
+  .tag-free { background: #0d2a0d; color: var(--success); border-color: #196c2e; }
+  .tag-breakfast { background: #2a1f00; color: var(--orange); border-color: #5a3e00; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center; padding: 3rem 1rem; color: var(--text3);
+    border: 1px dashed var(--border); border-radius: var(--radius-lg);
+  }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: .75rem; }
+
+  /* ── Inline editor ── */
+  .inline-editor {
+    background: var(--surface); border: 1px solid var(--primary);
+    border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+  }
+  .inline-editor .editor-title {
+    font-size: .9rem; font-weight: 600; color: var(--primary);
+    margin-bottom: 1.25rem; display: flex; align-items: center; gap: .5rem;
+  }
+  .editor-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+
+  /* ── Settings section ── */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  @media(max-width:600px) { .settings-grid { grid-template-columns: 1fr; } }
+
+  /* ── Toast ── */
+  #toast-container {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+    display: flex; flex-direction: column; gap: .5rem; pointer-events: none;
+  }
+  .toast {
+    display: flex; align-items: center; gap: .6rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: .65rem 1rem; font-size: .85rem;
+    box-shadow: var(--shadow); max-width: 320px;
+    animation: slideIn .25s ease;
+  }
+  .toast.success { border-color: var(--success); }
+  .toast.error   { border-color: var(--danger); }
+  .toast.info    { border-color: var(--primary); }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; transform: translateY(10px); } }
+
+  /* ── Save bar ── */
+  #save-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: .75rem 2rem; display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; z-index: 50; transform: translateY(100%);
+    transition: transform .25s ease; box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+  }
+  #save-bar.visible { transform: translateY(0); }
+  #save-bar p { font-size: .85rem; color: var(--text2); }
+  .save-bar-actions { display: flex; gap: .5rem; }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 2rem; width: 100%; max-width: 480px;
+    box-shadow: var(--shadow);
+  }
+  .modal h2 { font-size: 1.1rem; margin-bottom: .5rem; }
+  .modal p  { font-size: .85rem; color: var(--text2); margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.25rem; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid currentColor;
+    border-top-color: transparent; border-radius: 50%;
+    animation: spin .6s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Token icon in header ── */
+  .token-btn {
+    background: none; border: 1px solid var(--border); color: var(--text2);
+    border-radius: var(--radius); padding: .3rem .7rem; font-size: .78rem;
+    cursor: pointer; display: flex; align-items: center; gap: .3rem;
+    transition: border-color .15s, color .15s;
+  }
+  .token-btn:hover { border-color: var(--primary); color: var(--primary); }
+</style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>🏨 Hotel Price Checker</h1>
-      <span>毎朝7時に自動実行 — Booking.com & Agoda 最安値比較</span>
+<div class="app">
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">🏨</span>
+      <span>Hotel Price Checker</span>
     </div>
-  </header>
+    <div class="header-actions">
+      <div class="badge-status">
+        <span class="dot"></span>
+        <span id="header-status">GitHub Pages</span>
+      </div>
+      <button class="token-btn" onclick="showTokenModal()">🔑 Token</button>
+    </div>
+  </div>
+</header>
 
-  <div class="grid">
+<!-- ── Main ── -->
+<main>
 
-    <!-- 最安値バナー -->
-    <div class="cheapest-banner">
-      <span class="icon">🏆</span>
-      <div>
-        <strong>本日の最安値</strong>: データを取得するには下のボタンを押してください。
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('conditions', this)">🔍 検索条件</button>
+    <button class="tab" onclick="switchTab('settings', this)">⚙️ 設定</button>
+  </div>
+
+  <!-- ────────────── TAB: 検索条件 ────────────── -->
+  <div id="tab-conditions">
+
+    <!-- New condition button -->
+    <div class="card-header" style="margin-bottom:1rem;">
+      <p class="section-title">登録済み検索条件</p>
+      <button class="btn btn-primary" onclick="openNewEditor()">＋ 条件を追加</button>
+    </div>
+
+    <!-- Inline editor (hidden by default) -->
+    <div id="inline-editor" style="display:none;"></div>
+
+    <!-- List -->
+    <div id="condition-list"></div>
+
+  </div>
+
+  <!-- ────────────── TAB: 設定 ────────────── -->
+  <div id="tab-settings" style="display:none;">
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:1.25rem;">📧 通知設定</div>
+      <div class="settings-grid">
+        <div class="form-row">
+          <label>通知メールアドレス</label>
+          <input type="email" id="s-email" placeholder="example@gmail.com" />
+        </div>
+        <div class="form-row">
+          <label>実行時刻（毎日）</label>
+          <input type="time" id="s-time" value="07:00" />
+        </div>
       </div>
     </div>
 
-    <!-- 手動実行 -->
     <div class="card">
-      <h2>手動実行 / GitHub Actions</h2>
-      <p style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem;">
-        GitHub Actions の workflow_dispatch を使って手動でスクレイピングを実行できます。
-      </p>
-      <a
-        class="run-btn"
-        href="https://github.com/jinmao115-max/Claude_Test/actions/workflows/hotel_checker.yml"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        ▶ GitHub Actions を開く
-      </a>
-      <div id="status"></div>
+      <div class="card-title" style="margin-bottom:1.25rem;">🔑 GitHub 設定</div>
+      <div class="settings-grid">
+        <div class="form-row">
+          <label>リポジトリ</label>
+          <input type="text" id="s-repo" value="jinmao115-max/Claude_Test" readonly
+                 style="color:var(--text3);cursor:default;" />
+        </div>
+        <div class="form-row">
+          <label>設定ファイルパス</label>
+          <input type="text" id="s-filepath" value="config/search_conditions.json" readonly
+                 style="color:var(--text3);cursor:default;" />
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Personal Access Token（変更する場合）</label>
+        <div style="display:flex;gap:.5rem;">
+          <input type="password" id="s-token" placeholder="現在のトークンは保存済み（変更時のみ入力）" />
+          <button class="btn btn-ghost" style="white-space:nowrap;" onclick="saveTokenFromSettings()">保存</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Booking.com TOP 5 -->
-    <div class="card">
-      <h2>Booking.com <span class="badge badge-booking">TOP 5</span></h2>
-      <p class="last-updated">最終更新: — (GitHub Actions ログを参照)</p>
-      <table>
-        <thead><tr><th>ホテル名</th><th>価格</th></tr></thead>
-        <tbody id="booking-tbody">
-          <tr><td colspan="2" style="color:var(--muted);">GitHub Actions 実行後にデータが更新されます。</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Agoda TOP 5 -->
-    <div class="card">
-      <h2>Agoda <span class="badge badge-agoda">TOP 5</span></h2>
-      <p class="last-updated">最終更新: — (GitHub Actions ログを参照)</p>
-      <table>
-        <thead><tr><th>ホテル名</th><th>価格</th></tr></thead>
-        <tbody id="agoda-tbody">
-          <tr><td colspan="2" style="color:var(--muted);">GitHub Actions 実行後にデータが更新されます。</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 設定情報 -->
-    <div class="card">
-      <h2>設定情報</h2>
-      <table>
-        <tr><th>通知メール</th><td>jinmao115@gmail.com</td></tr>
-        <tr><th>実行スケジュール</th><td>毎朝 7:00 (JST)</td></tr>
-        <tr><th>スクレイピングエンジン</th><td>Playwright (Chromium)</td></tr>
-        <tr><th>対象サイト</th><td>Booking.com, Agoda</td></tr>
-        <tr><th>リポジトリ</th><td>
-          <a href="https://github.com/jinmao115-max/Claude_Test" target="_blank" rel="noopener noreferrer">
-            jinmao115-max/Claude_Test
-          </a>
-        </td></tr>
-      </table>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:.5rem;">
+      <button class="btn btn-success btn-lg" onclick="saveSettings()">
+        <span>💾</span> 設定を保存
+      </button>
     </div>
 
   </div>
+
+</main>
+
+<!-- ── Save Bar ── -->
+<div id="save-bar">
+  <p>⚠️ 未保存の変更があります</p>
+  <div class="save-bar-actions">
+    <button class="btn btn-ghost" onclick="revertChanges()">元に戻す</button>
+    <button class="btn btn-success" id="save-btn" onclick="pushToGitHub()">
+      <span id="save-icon">☁️</span> GitHubに保存
+    </button>
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div id="toast-container"></div>
+
+<!-- ── Token Modal ── -->
+<div id="token-modal" class="modal-backdrop" style="display:none;">
+  <div class="modal">
+    <h2>🔑 GitHub Personal Access Token</h2>
+    <p>
+      <code>config/search_conditions.json</code> への書き込みに使用します。<br>
+      トークンはブラウザの <code>localStorage</code> にのみ保存されます。<br>
+      必要な権限: <strong>repo（contents:write）</strong>
+    </p>
+    <div class="form-row">
+      <label>Personal Access Token</label>
+      <input type="password" id="modal-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeTokenModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveToken()">保存して続ける</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+//  Constants
+// ─────────────────────────────────────────
+const REPO      = 'jinmao115-max/Claude_Test';
+const FILE_PATH = 'config/search_conditions.json';
+const LS_TOKEN  = 'gh_pat';
+const LS_DATA   = 'hotel_checker_data';
+
+// ─────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────
+let state = {
+  conditions: [],
+  settings: { email: 'jinmao115@gmail.com', time: '07:00' }
+};
+let savedState = null;   // last pushed state
+let dirty = false;
+let editingId = null;    // id of condition being edited (null = new)
+let fileSha = null;      // current GitHub blob SHA
+
+// ─────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = getToken();
+  if (!token) { showTokenModal(); return; }
+  await loadFromGitHub();
+});
+
+// ─────────────────────────────────────────
+//  Token helpers
+// ─────────────────────────────────────────
+function getToken() { return localStorage.getItem(LS_TOKEN) || ''; }
+
+function showTokenModal() {
+  document.getElementById('token-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('modal-token-input').focus(), 50);
+}
+function closeTokenModal() {
+  document.getElementById('token-modal').style.display = 'none';
+}
+function saveToken() {
+  const val = document.getElementById('modal-token-input').value.trim();
+  if (!val) { toast('トークンを入力してください', 'error'); return; }
+  localStorage.setItem(LS_TOKEN, val);
+  closeTokenModal();
+  toast('トークンを保存しました', 'success');
+  loadFromGitHub();
+}
+function saveTokenFromSettings() {
+  const val = document.getElementById('s-token').value.trim();
+  if (!val) { toast('トークンを入力してください', 'error'); return; }
+  localStorage.setItem(LS_TOKEN, val);
+  document.getElementById('s-token').value = '';
+  toast('トークンを更新しました', 'success');
+}
+
+// ─────────────────────────────────────────
+//  GitHub API
+// ─────────────────────────────────────────
+async function loadFromGitHub() {
+  const token = getToken();
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' } }
+    );
+    if (res.status === 404) {
+      // File doesn't exist yet — start empty
+      fileSha = null;
+      renderAll();
+      return;
+    }
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const data = await res.json();
+    fileSha = data.sha;
+    const json = JSON.parse(atob(data.content.replace(/\n/g, '')));
+    state.conditions = json.conditions || [];
+    state.settings   = { ...state.settings, ...(json.settings || {}) };
+    savedState = deepClone(state);
+    renderAll();
+    toast('GitHubから設定を読み込みました', 'info');
+  } catch(e) {
+    console.error(e);
+    toast('読み込みエラー: ' + e.message, 'error');
+    renderAll();
+  }
+}
+
+async function pushToGitHub() {
+  const token = getToken();
+  if (!token) { showTokenModal(); return; }
+
+  const btn = document.getElementById('save-btn');
+  const icon = document.getElementById('save-icon');
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const content = btoa(unescape(encodeURIComponent(
+      JSON.stringify({ settings: state.settings, conditions: state.conditions }, null, 2)
+    )));
+    const body = {
+      message: `chore: update search_conditions.json [${new Date().toLocaleString('ja-JP')}]`,
+      content,
+      ...(fileSha ? { sha: fileSha } : {})
+    };
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || res.status);
+    }
+    const data = await res.json();
+    fileSha = data.content.sha;
+    savedState = deepClone(state);
+    setDirty(false);
+    toast('GitHubに保存しました ✓', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('保存エラー: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '☁️';
+  }
+}
+
+// ─────────────────────────────────────────
+//  Render
+// ─────────────────────────────────────────
+function renderAll() {
+  renderConditionList();
+  renderSettings();
+}
+
+function renderSettings() {
+  document.getElementById('s-email').value = state.settings.email || '';
+  document.getElementById('s-time').value  = state.settings.time  || '07:00';
+}
+
+function renderConditionList() {
+  const el = document.getElementById('condition-list');
+  if (!state.conditions.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <p>検索条件が登録されていません</p>
+        <p style="font-size:.8rem;margin-top:.4rem;color:var(--text3)">「＋ 条件を追加」ボタンから追加してください</p>
+      </div>`;
+    return;
+  }
+  el.innerHTML = state.conditions.map(c => conditionHTML(c)).join('');
+}
+
+function conditionHTML(c) {
+  const breakfastLabel = { included: '朝食付き', excluded: '朝食なし', any: 'どちらでも' };
+  const cancelLabel    = { free: 'キャンセル無料', any: '条件なし' };
+  const bedLabel       = { double: 'ダブル', twin: 'ツイン', single: 'シングル', any: '指定なし' };
+
+  const bfTag  = c.breakfast === 'included' ? `<span class="tag tag-breakfast">🍳 朝食付き</span>` : '';
+  const canTag = c.cancelFree === 'free'    ? `<span class="tag tag-free">✅ 無料キャンセル</span>` : '';
+
+  return `
+  <div class="condition-item" id="ci-${c.id}">
+    <div class="condition-meta">
+      <div class="condition-name">
+        📍 ${escHtml(c.location)}
+        ${bfTag}${canTag}
+        <span class="tag">${bedLabel[c.bedType] || c.bedType}</span>
+      </div>
+      <div class="condition-details">
+        <span>${escHtml(c.checkin)} → ${escHtml(c.checkout)}</span>
+        <span>${c.adults}名・${c.rooms}室</span>
+        <span>朝食: ${breakfastLabel[c.breakfast] || c.breakfast}</span>
+        <span>キャンセル: ${cancelLabel[c.cancelFree] || c.cancelFree}</span>
+      </div>
+    </div>
+    <div class="condition-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openEditEditor('${c.id}')">✏️ 編集</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCondition('${c.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+//  Inline Editor
+// ─────────────────────────────────────────
+function editorHTML(c) {
+  const isNew = !c;
+  const v = c || {
+    location: '', checkin: '', checkout: '',
+    adults: 2, rooms: 1,
+    bedType: 'any', breakfast: 'any', cancelFree: 'any'
+  };
+  return `
+  <div class="inline-editor">
+    <div class="editor-title">${isNew ? '＋ 新しい検索条件' : '✏️ 条件を編集'}</div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label>ホテル名 / 場所 <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="e-location" value="${escHtml(v.location)}" placeholder="例: 東京 新宿 / ホテル名" />
+      </div>
+      <div></div>
+      <div class="form-row">
+        <label>チェックイン <span style="color:var(--danger)">*</span></label>
+        <input type="date" id="e-checkin" value="${v.checkin}" />
+      </div>
+      <div class="form-row">
+        <label>チェックアウト <span style="color:var(--danger)">*</span></label>
+        <input type="date" id="e-checkout" value="${v.checkout}" />
+      </div>
+    </div>
+    <div class="grid-4">
+      <div class="form-row">
+        <label>宿泊人数</label>
+        <input type="number" id="e-adults" value="${v.adults}" min="1" max="10" />
+      </div>
+      <div class="form-row">
+        <label>部屋数</label>
+        <input type="number" id="e-rooms" value="${v.rooms}" min="1" max="10" />
+      </div>
+      <div class="form-row">
+        <label>ベッドタイプ</label>
+        <select id="e-bedtype">
+          ${opt('double','ダブル',v.bedType)}
+          ${opt('twin','ツイン',v.bedType)}
+          ${opt('single','シングル',v.bedType)}
+          ${opt('any','指定なし',v.bedType)}
+        </select>
+      </div>
+      <div></div>
+      <div class="form-row">
+        <label>朝食</label>
+        <select id="e-breakfast">
+          ${opt('included','朝食込み',v.breakfast)}
+          ${opt('excluded','なし',v.breakfast)}
+          ${opt('any','どちらでも',v.breakfast)}
+        </select>
+      </div>
+      <div class="form-row">
+        <label>キャンセル無料</label>
+        <select id="e-cancel">
+          ${opt('free','必須',v.cancelFree)}
+          ${opt('any','条件なし',v.cancelFree)}
+        </select>
+      </div>
+    </div>
+    <div class="editor-actions">
+      <button class="btn btn-ghost" onclick="closeEditor()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCondition()">
+        ${isNew ? '＋ 追加' : '✓ 更新'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function opt(val, label, current) {
+  return `<option value="${val}" ${current === val ? 'selected' : ''}>${label}</option>`;
+}
+
+function openNewEditor() {
+  editingId = null;
+  const el = document.getElementById('inline-editor');
+  el.innerHTML = editorHTML(null);
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('e-location').focus();
+}
+
+function openEditEditor(id) {
+  const c = state.conditions.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  const el = document.getElementById('inline-editor');
+  el.innerHTML = editorHTML(c);
+  el.style.display = 'block';
+  const item = document.getElementById(`ci-${id}`);
+  if (item) item.classList.add('editing');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeEditor() {
+  editingId = null;
+  document.getElementById('inline-editor').style.display = 'none';
+  document.getElementById('inline-editor').innerHTML = '';
+  document.querySelectorAll('.condition-item.editing').forEach(e => e.classList.remove('editing'));
+}
+
+function saveCondition() {
+  const location = document.getElementById('e-location').value.trim();
+  const checkin  = document.getElementById('e-checkin').value;
+  const checkout = document.getElementById('e-checkout').value;
+  if (!location) { toast('ホテル名/場所を入力してください', 'error'); return; }
+  if (!checkin)  { toast('チェックインを選択してください', 'error'); return; }
+  if (!checkout) { toast('チェックアウトを選択してください', 'error'); return; }
+  if (checkin >= checkout) { toast('チェックアウトはチェックインより後の日付にしてください', 'error'); return; }
+
+  const entry = {
+    id:         editingId || uid(),
+    location,
+    checkin,
+    checkout,
+    adults:     parseInt(document.getElementById('e-adults').value) || 2,
+    rooms:      parseInt(document.getElementById('e-rooms').value)  || 1,
+    bedType:    document.getElementById('e-bedtype').value,
+    breakfast:  document.getElementById('e-breakfast').value,
+    cancelFree: document.getElementById('e-cancel').value,
+  };
+
+  if (editingId) {
+    const i = state.conditions.findIndex(x => x.id === editingId);
+    state.conditions[i] = entry;
+    toast('条件を更新しました', 'success');
+  } else {
+    state.conditions.push(entry);
+    toast('条件を追加しました', 'success');
+  }
+
+  closeEditor();
+  renderConditionList();
+  setDirty(true);
+}
+
+function deleteCondition(id) {
+  if (!confirm('この検索条件を削除しますか？')) return;
+  state.conditions = state.conditions.filter(c => c.id !== id);
+  if (editingId === id) closeEditor();
+  renderConditionList();
+  setDirty(true);
+  toast('削除しました', 'info');
+}
+
+// ─────────────────────────────────────────
+//  Settings
+// ─────────────────────────────────────────
+function saveSettings() {
+  state.settings.email = document.getElementById('s-email').value.trim();
+  state.settings.time  = document.getElementById('s-time').value;
+  setDirty(true);
+  toast('設定を変更しました（GitHubに保存してください）', 'info');
+}
+
+// ─────────────────────────────────────────
+//  Tabs
+// ─────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-conditions').style.display = name === 'conditions' ? '' : 'none';
+  document.getElementById('tab-settings').style.display   = name === 'settings'   ? '' : 'none';
+}
+
+// ─────────────────────────────────────────
+//  Dirty / revert
+// ─────────────────────────────────────────
+function setDirty(val) {
+  dirty = val;
+  document.getElementById('save-bar').classList.toggle('visible', val);
+}
+
+function revertChanges() {
+  if (!savedState) return;
+  state = deepClone(savedState);
+  closeEditor();
+  renderAll();
+  setDirty(false);
+  toast('変更を元に戻しました', 'info');
+}
+
+// ─────────────────────────────────────────
+//  Toast
+// ─────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'fadeOut .3s ease forwards';
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+// ─────────────────────────────────────────
+//  Utils
+// ─────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
 </body>
 </html>
