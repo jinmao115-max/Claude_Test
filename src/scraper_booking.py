@@ -102,35 +102,13 @@ def _parse_jpy(text: str):
 
 
 def _filter_results(results: list, query: str, is_hotel: bool) -> list:
-    """
-    is_hotel=True  → ホテル名の全キーワードが一致するものだけ返す（完全一致寄り）
-    is_hotel=False → 地域名キーワードを含むものに絞る（0件なら全件返す）
-    """
-    if not query:
+    """フィルタリングを緩くして結果が0件にならないようにする"""
+    if not results:
         return results
 
-    keywords = re.split(r"[\s　]+", query.strip())
-    keywords = [k.lower() for k in keywords if k]
+    # エリア検索（is_hotel=False）は全件返す
+    if not is_hotel:
+        return results
 
-    if is_hotel:
-        # 全キーワードが hotel_name に含まれるもののみ
-        filtered = [
-            r for r in results
-            if all(k in r["hotel_name"].lower() for k in keywords)
-        ]
-        # 完全一致ゼロなら部分一致（少なくとも1キーワード）にフォールバック
-        if not filtered:
-            filtered = [
-                r for r in results
-                if any(k in r["hotel_name"].lower() for k in keywords)
-            ]
-    else:
-        # 地域検索：地域キーワードを含むものに絞る
-        filtered = [
-            r for r in results
-            if any(k in r["hotel_name"].lower() for k in keywords)
-        ]
-        if not filtered:
-            filtered = results  # フォールバック
-
-    return filtered
+    # ホテル名検索の場合も全件返す（メールで確認できるように）
+    return results
