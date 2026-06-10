@@ -12,9 +12,16 @@ logger = logging.getLogger(__name__)
 
 def normalize_condition(c):
     """WebUIのキー名をPythonコードのキー名に変換"""
+    hotel_name = c.get("hotel_name", "").strip()
+    location = c.get("location", "").strip()
+
+    # hotel_name と location が同じ値の場合はエリア検索として扱う
+    if hotel_name == location:
+        hotel_name = ""
+
     return {
-        "hotel_name": c.get("hotel_name") or c.get("location", ""),
-        "location": c.get("location", ""),
+        "hotel_name": hotel_name,
+        "location": location,
         "checkin": c.get("checkin", ""),
         "checkout": c.get("checkout", ""),
         "guests": c.get("guests") or c.get("adults", 2),
