@@ -10,8 +10,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def normalize_condition(c):
+    """WebUIのキー名をPythonコードのキー名に変換"""
+    return {
+        "hotel_name": c.get("hotel_name") or c.get("location", ""),
+        "location": c.get("location", ""),
+        "checkin": c.get("checkin", ""),
+        "checkout": c.get("checkout", ""),
+        "guests": c.get("guests") or c.get("adults", 2),
+        "rooms": c.get("rooms", 1),
+        "bed_type": c.get("bed_type") or c.get("bedType", "any"),
+        "breakfast": c.get("breakfast", "any"),
+        "free_cancellation": c.get("free_cancellation") or (c.get("cancelFree") == "free"),
+    }
+
 def main():
-    # 検索条件を読み込み
     try:
         with open("config/search_conditions.json", "r", encoding="utf-8") as f:
             config = json.load(f)
@@ -19,8 +32,13 @@ def main():
         logger.error("設定ファイルの読み込みに失敗: %s", e)
         sys.exit(1)
 
-    searches = config.get("searches", [])
-    notify_email = config.get("settings", {}).get("notify_email", "jinmao115@gmail.com")
+    # searches / conditions どちらのキーにも対応
+    searches = config.get("searches") or config.get("conditions", [])
+    notify_email = (
+        config.get("settings", {}).get("notify_email")
+        or config.get("settings", {}).get("email")
+        or "jinmao115@gmail.com"
+    )
 
     if not searches:
         logger.warning("検索条件が設定されていません")
@@ -30,7 +48,8 @@ def main():
 
     all_results = []
     for i, condition in enumerate(searches, 1):
-        name = condition.get("hotel_name", condition.get("location", "不明"))
+        condition = normalize_condition(condition)
+        name = condition.get("hotel_name") or condition.get("location", "不明")
         logger.info("[%d/%d] %s を検索中...", i, len(searches), name)
         result = compare_prices(condition)
         all_results.append(result)
