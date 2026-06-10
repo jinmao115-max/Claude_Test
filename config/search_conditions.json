@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "email": "jinmao115@gmail.com",
+    "time": "07:00"
+  },
+  "conditions": [
+    {
+      "id": "qoyrks97",
+      "location": "レム日比谷",
+      "checkin": "2026-08-28",
+      "checkout": "2026-08-29",
+      "adults": 4,
+      "rooms": 2,
+      "bedType": "single",
+      "breakfast": "any",
+      "cancelFree": "free"
+    }
+  ]
+}
