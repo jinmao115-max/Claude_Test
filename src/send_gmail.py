@@ -30,7 +30,7 @@ def _get_credentials() -> Credentials:
     return Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
 
-def send_gmail(report: dict) -> None:
+def send_email(report: dict) -> None:
     subject = f"【ホテル最安値】{report['date']} の価格レポート"
     html_body = report["html_body"]
 
