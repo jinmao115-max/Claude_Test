@@ -1,72 +1,96 @@
 import logging
+import re
 from urllib.parse import quote
 from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.agoda.com/search"
+# 日本語版・JPY固定
+BASE_URL = "https://www.agoda.com/ja-jp/search"
 
 
 def scrape_agoda(condition: dict) -> list:
     """
-    Agoda から condition に合うホテルを検索し価格リストを返す。
+    Agoda（日本語版・JPY）から指定ホテル/地域の価格を取得する。
     """
-    query    = condition.get("hotel_name") or condition.get("location", "Tokyo")
+    query    = condition.get("hotel_name") or condition.get("location", "東京")
     checkin  = condition.get("checkin", "")
     checkout = condition.get("checkout", "")
     guests   = int(condition.get("guests", 2))
     rooms    = int(condition.get("rooms", 1))
     free_cancel = condition.get("free_cancellation", False)
+    breakfast   = condition.get("breakfast", "any")
 
-    params = (
-        f"?city=17254"          # Tokyo city id (fallback)
-        f"&textToSearch={quote(query)}"
+    url = (
+        f"{BASE_URL}?textToSearch={quote(query)}"
         f"&checkIn={checkin}&checkOut={checkout}"
         f"&rooms={rooms}&adults={guests}"
-        f"&los=1&locale=ja-jp&currency=JPY"
+        f"&currency=JPY&locale=ja-JP"
     )
     if free_cancel:
-        params += "&filterByFreeCancellation=true"
-    if condition.get("breakfast") == "included":
-        params += "&filterByBreakfastIncluded=true"
+        url += "&filterByFreeCancellation=true"
+    if breakfast == "included":
+        url += "&filterByBreakfastIncluded=true"
 
-    url = BASE_URL + params
     results = []
+    logger.info("Agoda 検索: %s", query)
 
-    logger.info("Agoda: %s", url)
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
+                locale="ja-JP",
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
                     "Chrome/124.0.0.0 Safari/537.36"
                 ),
-                locale="ja-JP",
             )
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-            page.wait_for_timeout(4000)
+            # Agoda は JS レンダリングが遅いため長めに待機
+            page.wait_for_timeout(6000)
 
-            cards = page.query_selector_all('[data-element-name="property-card"]')
+            # ── セレクタ候補を複数試す ──────────────────────────
+            cards = (
+                page.query_selector_all('[data-element-name="property-card"]')
+                or page.query_selector_all('[class*="PropertyCard"]')
+                or page.query_selector_all('[data-testid="property-card"]')
+            )
+            logger.info("Agoda: %d 件のカードを検出", len(cards))
+
             for card in cards[:20]:
                 try:
-                    name_el  = card.query_selector('[data-element-name="property-card-name"]')
-                    price_el = card.query_selector('[data-element-name="final-price"]')
-                    url_el   = card.query_selector("a")
+                    # ホテル名
+                    name_el = (
+                        card.query_selector('[data-element-name="property-card-name"]')
+                        or card.query_selector('h3')
+                        or card.query_selector('[class*="PropertyName"]')
+                    )
+                    # 価格
+                    price_el = (
+                        card.query_selector('[data-element-name="final-price"]')
+                        or card.query_selector('[class*="Price"][class*="final"]')
+                        or card.query_selector('[data-selenium="display-price"]')
+                        or card.query_selector('[class*="price"]')
+                    )
+                    url_el = card.query_selector("a")
+
                     if not (name_el and price_el):
                         continue
-                    name       = name_el.inner_text().strip()
+
+                    hotel_name = name_el.inner_text().strip()
                     price_text = price_el.inner_text().strip()
                     href       = url_el.get_attribute("href") if url_el else ""
                     full_url   = href if href.startswith("http") else f"https://www.agoda.com{href}"
-                    price      = _parse_price(price_text)
-                    if price is None:
+                    price      = _parse_jpy(price_text)
+
+                    if price is None or price < 1000:
                         continue
+
                     results.append({
                         "site":       "Agoda",
-                        "hotel_name": name,
+                        "hotel_name": hotel_name,
                         "price":      price,
                         "currency":   "JPY",
                         "url":        full_url,
@@ -74,14 +98,47 @@ def scrape_agoda(condition: dict) -> list:
                 except Exception as e:
                     logger.debug("card parse error: %s", e)
 
+            # カードが取れなかった場合のデバッグ用スクリーンショット
+            if not results:
+                try:
+                    page.screenshot(path="agoda_debug.png")
+                    logger.warning("Agoda: 結果なし。agoda_debug.png を確認してください")
+                except Exception:
+                    pass
+
             browser.close()
     except Exception as e:
         logger.error("Agoda scrape failed: %s", e)
 
+    # ホテル名指定がある場合は名前で絞り込み
+    results = _filter_by_name(results, query)
     logger.info("Agoda: %d 件取得", len(results))
     return results
 
 
-def _parse_price(text: str):
-    digits = "".join(c for c in text if c.isdigit())
-    return int(digits) if digits else None
+def _parse_jpy(text: str):
+    """
+    "¥12,345" や "12,345円" などから整数を取り出す。
+    """
+    nums = re.findall(r"[\d,]+", text)
+    for n in nums:
+        val = int(n.replace(",", ""))
+        if val >= 1000:
+            return val
+    return None
+
+
+def _filter_by_name(results: list, query: str) -> list:
+    """
+    query のキーワードを少なくとも1つ含むホテルに絞り込む。
+    一致ゼロの場合は全件返す。
+    """
+    if not query:
+        return results
+    keywords = re.split(r"[\s　]+", query.strip())
+    keywords = [k.lower() for k in keywords if k]
+    filtered = [
+        r for r in results
+        if any(k in r["hotel_name"].lower() for k in keywords)
+    ]
+    return filtered if filtered else results
