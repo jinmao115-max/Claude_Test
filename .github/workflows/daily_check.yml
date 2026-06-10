@@ -1,0 +1,32 @@
+﻿name: 毎日ホテル最安値チェック
+
+on:
+  schedule:
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依存パッケージをインストール
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: ホテル価格チェックを実行
+        env:
+          GMAIL_CREDENTIALS: ${{ secrets.GMAIL_CREDENTIALS }}
+          GMAIL_TOKEN: ${{ secrets.GMAIL_TOKEN }}
+        run: python main.py
