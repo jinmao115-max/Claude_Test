@@ -6,12 +6,12 @@
   "conditions": [
     {
       "id": "qoyrks97",
-      "location": "レム日比谷",
+      "location": "東京駅付近",
       "checkin": "2026-08-28",
       "checkout": "2026-08-29",
       "adults": 4,
       "rooms": 2,
-      "bedType": "single",
+      "bedType": "twin",
       "breakfast": "any",
       "cancelFree": "free"
     }
