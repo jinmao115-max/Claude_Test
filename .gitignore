@@ -1,0 +1,27 @@
+# 認証情報・シークレット（絶対にコミットしない）
+credentials.json
+token.json
+*.key
+*.pem
+.env
+.env.*
+secrets.json
+service_account.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 一時ファイル
+*.tmp
+*_tmp.*
